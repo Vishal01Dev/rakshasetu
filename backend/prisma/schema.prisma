@@ -1,0 +1,448 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum USER_TYPE {
+  BUYER
+  SELLER
+}
+
+enum USER_STATUS {
+  ACTIVE
+  BANNED
+}
+
+enum USER_VERIFICATION_STATUS {
+  DEFAULT
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum ADMIN_STATUS {
+  ACTIVE
+  INACTIVE
+}
+
+enum LISTING_TYPE {
+  PRODUCT
+  SERVICE
+}
+
+enum LISTING_STATUS {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum CONNECT_STATUS {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id                  String                   @id
+  firstName           String
+  lastName            String
+  userName            String                   @unique
+  email               String                   @unique
+  business            String
+  type                USER_TYPE                @default(BUYER)
+  mobile              String
+  password            String
+  image               String?
+  status              USER_STATUS              @default(ACTIVE)
+  address             Json?
+  emailVerified       Boolean                  @default(false)
+  smsVerified         Boolean                  @default(false)
+  kycVerified         USER_VERIFICATION_STATUS @default(DEFAULT) // 0: Default, 1: Approved, 2: Pending, 3: Rejected
+  bankVerified        USER_VERIFICATION_STATUS @default(DEFAULT) // 0: Default, 1: Approved, 2: Pending, 3: Rejected
+  gstVerified         USER_VERIFICATION_STATUS @default(DEFAULT) // 0: Default, 1: Approved, 2: Pending, 3: Rejected
+  verificationCode    String?
+  verificationSentAt  DateTime?
+  twoFactorVerified   Boolean                  @default(false)
+  twoFactorSecret     String?
+  twoFactorStatus     Boolean                  @default(false)
+  deviceId            String?
+  emailVerifiedAt     DateTime?
+  rememberToken       String?
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  UserKycDetails       UserKycDetails?
+  listing              Listing[]
+  userConnects         Connects[]      @relation("user")
+  sellerConnects       Connects[]      @relation("seller")
+  conversationsAsUser  Conversation[]  @relation("conversation_user")
+  conversationAsSeller Conversation[]  @relation("conversation_seller")
+  sentMessages         Message[]
+  orderBuyer           Order[]         @relation("order_buyer")
+  orderSeller          Order[]         @relation("order_seller")
+
+  @@map("users")
+}
+
+model UserKycDetails {
+  id     String @id
+  userId String @unique
+
+  panNumber             String?
+  dateOfBirth           String?
+  fullNameAsPerPan      String?
+  panVerificationStatus USER_VERIFICATION_STATUS @default(DEFAULT) // 0: Default, 1: Approved, 2: Pending, 3: Rejected
+  panRejectionReason    String?
+
+  aadharNumber             String?
+  fullNameAsPerAadhar      String?
+  aadhaarReferenceId       String?
+  aadharVerificationStatus USER_VERIFICATION_STATUS @default(DEFAULT) // 0: Default, 1: Approved, 2: Pending, 3: Rejected
+  aadharRejectionReason    String?
+
+  gstNumber             String?
+  gstStatus             String?
+  constitution          String?
+  registrationDate      String?
+  businessName          String?
+  businessAddress       Json?
+  tradeName             String?
+  gstVerificationStatus USER_VERIFICATION_STATUS @default(DEFAULT) // 0: Default, 1: Approved, 2: Pending, 3: Rejected
+  gstRejectionReason    String?
+
+  bankAccountNumber      String?
+  bankIfscCode           String?
+  fullNameAsPerBank      String?
+  bankVerificationStatus USER_VERIFICATION_STATUS @default(DEFAULT) // 0: Default, 1: Approved, 2: Pending, 3: Rejected
+  bankRejectionReason    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("user_kyc_details")
+}
+
+model Admin {
+  id        String       @id
+  firstName String
+  lastName  String
+  userName  String       @unique
+  email     String       @unique
+  password  String
+  image     String?
+  status    ADMIN_STATUS @default(ACTIVE)
+
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+
+  verificationCode   String?
+  verificationSentAt DateTime?
+
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+
+  roleId String
+  role   AdminRole @relation(fields: [roleId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
+}
+
+model AdminRole {
+  id          String  @id
+  name        String  @unique
+  description String?
+
+  admins      Admin[]
+  permissions AdminPermission[] @relation("RolePermissions")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admin_roles")
+}
+
+model AdminPermission {
+  id    String  @id
+  name  String  @unique // e.g., "MANAGE_USERS"
+  label String? // e.g., "Manage user accounts"
+
+  roles AdminRole[] @relation("RolePermissions")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admin_permissions")
+}
+
+model Listing {
+  id           String         @id
+  sellerId     String
+  type         LISTING_TYPE // PRODUCT or SERVICE
+  title        String
+  description  String
+  category     String
+  subCategory  String?
+  price        Float
+  status       LISTING_STATUS @default(ACTIVE)
+  tags         String[]
+  metadata     Json? // flexible product/service-specific attributes
+  media        Json? // images, videos, etc.
+  externalLink String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  seller       User           @relation(fields: [sellerId], references: [id])
+  connects     Connects[]
+  conversation Conversation[]
+  Order        Order[]
+
+  @@index([sellerId])
+  @@index([status])
+  @@index([type])
+  @@map("listings")
+}
+
+model Connects {
+  id        String         @id
+  userId    String
+  listingId String?
+  sellerId  String
+  message   String?        @db.VarChar(500)
+  status    CONNECT_STATUS @default(PENDING) // PENDING, ACCEPTED, REJECTED
+
+  rejectReason String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User     @relation("user", fields: [userId], references: [id])
+  seller  User     @relation("seller", fields: [sellerId], references: [id])
+  listing Listing? @relation(fields: [listingId], references: [id])
+
+  @@index([userId])
+  @@index([sellerId])
+  @@index([listingId])
+  @@map("connects")
+}
+
+model Conversation {
+  id        String   @id
+  userId    String
+  listingId String?
+  sellerId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation("conversation_user", fields: [userId], references: [id])
+  seller   User      @relation("conversation_seller", fields: [sellerId], references: [id])
+  listing  Listing?  @relation(fields: [listingId], references: [id])
+  messages Message[]
+
+  @@index([userId])
+  @@index([sellerId])
+  @@index([listingId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id
+  conversationId String
+  senderId       String
+  content        String
+  media          Json? // optional media attachments
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  sender       User         @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@map("messages")
+}
+
+// this is the start of order flow tables
+
+enum ORDER_SOURCE {
+  B2B // Order created inside RakshaSetu by logged-in users
+  D2C // Order sent from an external plugin like Shopify
+}
+
+enum PAYMENT_METHOD {
+  PREPAID // Paid during order creation
+  PAY_ON_DELIVERY // Paid later via QR/Link before delivery
+}
+
+enum PAYMENT_STATUS {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum ORDER_STATUS {
+  CREATED // Order record created
+  PAID // Payment received
+  SHIPPED // Shipment in progress
+  OUT_FOR_DELIVERY // With courier
+  DELIVERED // Delivered and OTP matched
+  CANCELLED
+}
+
+enum DELIVERY_STATUS {
+  PENDING
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  RETURNED
+  FAILED
+}
+
+enum DISPUTE_TYPE {
+  DELIVERY_FAILURE
+  ITEM_ISSUE
+  REFUND_REQUEST
+  FRAUD
+  OTHER
+}
+
+enum TICKET_STATUS {
+  OPEN
+  RESOLVED
+  REJECTED
+}
+
+enum PAYMENT_GATEWAY_METHOD {
+  RAZORPAY
+  QR
+  UPI
+  LINK
+}
+
+enum ORDER_TYPE {
+  CUSTOM
+  PRODUCT
+  SERVICE
+}
+
+model Order {
+  id              String          @id
+  type            ORDER_TYPE
+  buyerId         String
+  sellerId        String
+  source          ORDER_SOURCE
+  pluginDomain    String? // e.g. shopify-store.myshopify.com (only for D2C)
+  paymentMethod   PAYMENT_METHOD
+  paymentStatus   PAYMENT_STATUS  @default(PENDING)
+  status          ORDER_STATUS    @default(CREATED)
+  currency        String          @default("INR")
+  razorpayOrderId String? // Used to match Razorpay webhook
+  deliveryOtp     String? // Generated after shipping + payment
+  otpVerified     Boolean         @default(false)
+  courierPartner  String? // Bluedart, Ekart etc.
+  shippingId      String? // Tracking ID from courier
+  deliveryStatus  DELIVERY_STATUS @default(PENDING)
+  deliveredAt     DateTime?
+
+  amount      Float // ✅ Mandatory, always passed by buyer
+  listingId   String? // ✅ Optional for custom orders
+  isCustom    Boolean @default(false) // ✅ To indicate fully custom orders
+  customTitle String? // Optional: for display in custom orders
+  customDesc  String? // Optional: for display in custom orders
+  notes       String? // Optional: extra instructions from buyer
+
+  buyer   User     @relation("order_buyer", fields: [buyerId], references: [id])
+  seller  User     @relation("order_seller", fields: [sellerId], references: [id])
+  listing Listing? @relation(fields: [listingId], references: [id])
+
+  transaction EscrowTransaction?
+  ticket      DisputeTicket?
+
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  ReverseDelivery      ReverseDelivery[]
+  DeliveryVerification DeliveryVerification[]
+  OrderMeta            OrderMeta?
+}
+
+model OrderMeta {
+  id      String @id
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  deliveryDate DateTime? // Optional delivery/scheduled date
+  deliveryMode String? // "remote", "in_person", "pickup", etc.
+  location     String? // Address or coordinates
+  attachments  Json? // e.g. [{name, url, type}]
+  extraDetails Json? // Flexible: form data, custom preferences
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("order_meta")
+}
+
+model EscrowTransaction {
+  id                String                 @id
+  orderId           String                 @unique
+  amount            Float
+  status            PAYMENT_STATUS
+  paymentMode       PAYMENT_GATEWAY_METHOD
+  razorpayPaymentId String?
+  paidAt            DateTime?
+  releasedAt        DateTime?
+  refundedAt        DateTime?
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model DisputeTicket {
+  id         String        @id
+  orderId    String        @unique
+  type       DISPUTE_TYPE
+  status     TICKET_STATUS
+  openedBy   String // buyerId or admin system
+  reason     String
+  resolution String?
+  adminNotes String?
+  resolvedAt DateTime?
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model ReverseDelivery {
+  id                String          @id
+  orderId           String
+  courierPartner    String
+  returnTrackingId  String
+  pickupScheduledAt DateTime?
+  pickedUpAt        DateTime?
+  returnedAt        DateTime?
+  status            DELIVERY_STATUS
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model DeliveryVerification {
+  id         String    @id
+  orderId    String
+  otp        String
+  verified   Boolean   @default(false)
+  verifiedAt DateTime?
+  verifiedBy String? // Agent name or API ID
+
+  order Order @relation(fields: [orderId], references: [id])
+}

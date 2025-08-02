@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+
+@theme {
+    /* ===== Typography ===== */
+    --font-display: "Satoshi", "sans-serif";
+    --font-body: "Inter", "sans-serif";
+
+    /* ===== Breakpoints ===== */
+    /* Extra small - Smallest phones */
+    --breakpoint-xs: 360px;
+    /* Small phones */
+    --breakpoint-sm: 480px;
+    /* Large phones / small tablets */
+    --breakpoint-md: 640px;
+    /* Tablets */
+    --breakpoint-lg: 768px;
+    /* Small laptops */
+    --breakpoint-xl: 1024px;
+    /* Desktops */
+    --breakpoint-2xl: 1280px;
+    /* Large desktops */
+    --breakpoint-3xl: 1536px;
+    /* Full HD / widescreens */
+    --breakpoint-4xl: 1920px;
+
+    /* ===== Brand Colors ===== */
+    /* Main deep blue */
+    --color-primary: #003C5C;
+    --color-primary-hover: #002A42;
+    /* Orange CTA */
+    --color-accent: #FF7900;
+    --color-accent-hover: #e86d00;
+    --color-success: #00B140;
+    --color-success-bg: #d6f5e3;
+
+    /* ===== Text Colors ===== */
+    /* Default readable text */
+    --color-text-primary: #003C5C;
+    /* Slightly muted */
+    --color-text-secondary: #374151;
+    /* Labels, placeholders */
+    --color-text-muted: #6B7280;
+    /* On dark or brand bg */
+    --color-text-inverted: #ffffff;
+
+    /* ===== Background Colors ===== */
+    /* Main app background */
+    --color-bg: #ffffff;
+    /* Sections, light panels */
+    --color-bg-subtle: #f9fafb;
+    /* Hover layers, muted cards */
+    --color-bg-muted: #f3f4f6;
+    --color-bg-success: #d6f5e3;
+
+    /* ===== Border/Divider Colors ===== */
+    /* Base border */
+    --color-border: #e5e7eb;
+    /* Softer outlines */
+    --color-border-muted: #d1d5db;
+
+    /* ===== Neutral Scale (fallbacks or optional) ===== */
+    --color-gray-50: #F9FAFB;
+    --color-gray-100: #F3F4F6;
+    --color-gray-200: #E5E7EB;
+    --color-gray-300: #D1D5DB;
+    --color-gray-500: #6B7280;
+    --color-gray-700: #374151;
+    --color-gray-900: #111827;
+}
