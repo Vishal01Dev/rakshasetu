@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Razorpay</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+  <button id="payBtn">Pay Now</button>
+
+  <script>
+    document.getElementById("payBtn").onclick = function () {
+      const options = {
+        key: "rzp_test_vlnLMdNO2CZU5Y",
+        amount: 505000, // in paise
+        currency: "INR",
+        name: "RakshaSetu",
+        description: "Test Payment",
+        order_id: "order_R1AOSqxqo6rxco", // replace with Razorpay Order ID
+        handler: function (response) {
+          alert("Payment successful!");
+          console.log(response);
+          // POST to your /verify-razorpay-payment API
+        },
+        prefill: {
+          name: "Vishal Mistry",
+          email: "vishal@example.com",
+          contact: "9999999999",
+        },
+        theme: {
+          color: "#3399cc",
+        },
+      };
+
+      const rzp1 = new Razorpay(options);
+      rzp1.open();
+    };
+  </script>
+</body>
+</html>
+
+
+{
+    "razorpay_payment_id": "pay_R1AQpd3FfdJaVC",
+    "razorpay_order_id": "order_R1AOSqxqo6rxco",
+    "razorpay_signature": "71cbb8d89ba6b97ad247253ebb459ea35f4a2188db61cfb10014e19dbc5d3699"
+}

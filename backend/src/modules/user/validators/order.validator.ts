@@ -16,6 +16,9 @@ export const createOrderSchema = z.object({
     customDescription: z.string().min(10).max(2000).optional(),
     customAmount: z.coerce.number().positive().optional(),
 
+    // platform fee details
+    platformFeePaidBy: z.enum(["BUYER", "SELLER", "BOTH"]).optional(),
+
     // Optional metadata (used in custom and service orders)
     meta: z
         .object({

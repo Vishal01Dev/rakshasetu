@@ -8,7 +8,7 @@ export const handleAddListing = async (userId: string, listingData: ListingData)
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AppError('User not found', 404);
 
-    const listingId = await generateUID('lst', 'listing', 'id', 8);
+    const listingId = await generateUID('lst', 'listing', 'id', 10);
 
     const newListing = await prisma.listing.create({
         data: {
