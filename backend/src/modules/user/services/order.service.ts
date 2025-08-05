@@ -1,8 +1,8 @@
-import { ORDER_SOURCE, ORDER_STATUS, ORDER_TYPE } from "@prisma/client";
+import { DISPUTE_TYPE, ORDER_SOURCE, ORDER_STATUS, ORDER_TYPE, RELEASE_STATUS } from "@prisma/client";
 import prisma from "../../../config/db";
-import { CreateOrderInput, isCustomOrder, isProductOrder, isServiceOrder } from "../validators/order.validator";
-import { generateUID } from "../../../utils/generateUid";
 import { calculatePlatformFee } from "../../../config/platformFee";
+import { generateUID } from "../../../utils/generateUid";
+import { CreateOrderInput, isCustomOrder, isProductOrder, isServiceOrder } from "../validators/order.validator";
 import { handleCreateRazorpayOrder } from "./payment.service";
 
 export const handleCreateOrder = async (orderData: CreateOrderInput, userId: string) => {
@@ -213,4 +213,209 @@ export const handleGetOrderSummary = async (orderId: string, userId: string) => 
 
     return order
 
+}
+
+export const handleSendReleaseRequest = async (orderId: string, userId: string) => {
+    const order = await prisma.order.findUnique({
+        where: { id: orderId, buyerId: userId },
+        include: {
+            transaction: true
+        }
+    })
+
+    if (!order) {
+        throw new Error("Order not found or you are not authorized to release this order");
+    }
+
+    if (order.status !== ORDER_STATUS.DELIVERED) {
+        throw new Error("Order is not completed, cannot send release request");
+    }
+    if (order.transaction?.releaseRequested) {
+        throw new Error("Release request already sent for this order");
+    }
+
+    const updatedTransaction = await prisma.escrowTransaction.update({
+        where: { orderId: order.id },
+        data: {
+            releaseRequested: true,
+            releaseRequestedAt: new Date(),
+            releaseRequestedByUserId: userId,
+            releaseStatus: RELEASE_STATUS.SENT,
+            releaseNotes: "Release requested by buyer",
+        }
+    });
+
+    if (!updatedTransaction) {
+        throw new Error("Failed to update transaction for release request");
+    }
+
+    return updatedTransaction
+
+}
+
+
+export const handleGetReleaseStatus = async (orderId: string, userId: string) => {
+    const order = await prisma.order.findFirst({
+        where: {
+            id: orderId,
+            OR: [
+                { buyerId: userId },
+                { sellerId: userId }
+            ]
+        },
+        include: {
+            transaction: true
+        }
+    });
+
+    if (!order) {
+        throw new Error("Order not found or you are not authorized to view release status");
+    }
+
+    if (!order.transaction) {
+        throw new Error("No transaction found for this order");
+    }
+
+    return {
+        releaseRequested: order.transaction.releaseRequested,
+        releaseRequestedAt: order.transaction.releaseRequestedAt,
+        releaseStatus: order.transaction.releaseStatus,
+        releaseNotes: order.transaction.releaseNotes,
+        releaseRequestedByUserId: order.transaction.releaseRequestedByUserId,
+        releaseApprovedByAdmin: order.transaction.releaseApprovedByAdmin,
+        releaseApprovedAt: order.transaction.releaseApprovedAt,
+        releaseApprovedByAdminId: order.transaction.releaseApprovedByAdminId
+    };
+}
+
+
+export const handleCreateDisputeTicket = async (
+    orderId: string,
+    userId: string,
+    type: DISPUTE_TYPE,         // e.g. QUALITY_ISSUE, DELAYED_DELIVERY
+    reason: string              // short text like "Received damaged product"
+) => {
+    const order = await prisma.order.findFirst({
+        where: {
+            id: orderId,
+            OR: [
+                { buyerId: userId },
+                { sellerId: userId }
+            ]
+        },
+        include: {
+            transaction: true,
+            ticket: true
+        }
+    });
+
+    if (!order) {
+        throw new Error("Order not found or you are not authorized to create a dispute");
+    }
+
+    if (order.status !== ORDER_STATUS.DELIVERED) {
+        throw new Error("Order is not completed, cannot create dispute");
+    }
+
+    if (order.transaction?.releaseRequested) {
+        throw new Error("Release request already sent for this order, cannot create dispute");
+    }
+
+    if (order.ticket) {
+        throw new Error("Dispute ticket already exists for this order");
+    }
+
+    const id = await generateUID("dt", "disputeTicket", "id", 10);
+
+    const disputeTicket = await prisma.disputeTicket.create({
+        data: {
+            id,
+            orderId: order.id,
+            status: "OPEN",
+            type,
+            openedBy: userId,
+            reason
+        }
+    });
+
+    return disputeTicket;
+};
+
+
+export const handleGetDisputeTicketStatus = async (orderId: string, userId: string) => {
+    const order = await prisma.order.findFirst({
+        where: {
+            id: orderId,
+            OR: [
+                { buyerId: userId },
+                { sellerId: userId }
+            ]
+        },
+        include: {
+            ticket: true
+        }
+    });
+
+    if (!order) {
+        throw new Error("Order not found or you are not authorized to view dispute status");
+    }
+
+    if (!order.ticket) {
+        throw new Error("No dispute ticket found for this order");
+    }
+
+    return order.ticket;
+}
+
+
+export const handleGetAllUserOrders = async (userId: string) => {
+    const orders = await prisma.order.findMany({
+        where: {
+            OR: [
+                { buyerId: userId },
+                { sellerId: userId }
+            ]
+        },
+        include: {
+            OrderMeta: true,
+            seller: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    image: true,
+                    business: true
+                },
+            },
+            buyer: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    image: true,
+                    business: true
+                },
+            },
+            listing: {
+                select: {
+                    id: true,
+                    title: true,
+                },
+            },
+            transaction: {
+                include: {
+                    refunds: true
+                }
+            }
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    });
+
+    if (!orders || orders.length === 0) {
+        return [];
+    }
+
+    return orders;
 }

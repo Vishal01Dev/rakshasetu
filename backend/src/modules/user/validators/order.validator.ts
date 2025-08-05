@@ -51,3 +51,13 @@ export const isServiceOrder = (data: any) =>
 export const isCustomOrder = (data: any) => data.listingId === null;
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+
+
+export const createDisputeTicketSchema = z.object({
+    type: z.enum(["DELIVERY_FAILURE",
+        "ITEM_ISSUE",
+        "REFUND_REQUEST",
+        "FRAUD",
+        "OTHER"]),
+    reason: z.string().max(500),
+})

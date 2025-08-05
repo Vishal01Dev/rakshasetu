@@ -7,7 +7,6 @@ const router = Router();
 router.use(verifyLoggedUser)
 
 router.post("/create", createRazorpayOrder);
-
 router.post("/verify", verifyRazorpayPayment);
 
 
