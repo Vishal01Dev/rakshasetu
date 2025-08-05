@@ -15,7 +15,7 @@ export const handleCreateConnect = async (userId: string, listingId: string | un
         throw new AppError('You cannot connect with yourself', 400);
     }
 
-    const connectId = await generateUID('cnt', 'connects', 'id', 8);
+    const connectId = await generateUID('cnt', 'connects', 'id', 10);
 
     const newConnect = await prisma.connects.create({
         data: {
@@ -58,7 +58,7 @@ export const handleAcceptConnect = async (userId: string, connectId: string) => 
 
     if (!connect) throw new AppError('Connect request not found or you are not authorized to accept it', 404);
 
-    const conversationId = await generateUID('con', 'conversation', 'id', 8);
+    const conversationId = await generateUID('con', 'conversation', 'id', 10);
 
     await prisma.conversation.create({
         data: {

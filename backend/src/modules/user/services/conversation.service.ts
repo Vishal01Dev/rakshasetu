@@ -13,7 +13,7 @@ export const handleSendMessage = async (content: string | undefined, conversatio
         throw new AppError('Conversation not found', 404);
     }
 
-    const messageId = await generateUID('msg', 'message', 'id', 8);
+    const messageId = await generateUID('msg', 'message', 'id', 10);
 
     const message = await prisma.message.create({
         data: {

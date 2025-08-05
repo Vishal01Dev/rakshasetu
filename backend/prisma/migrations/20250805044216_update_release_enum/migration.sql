@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "public"."RELEASE_STATUS" ADD VALUE 'SENT';
