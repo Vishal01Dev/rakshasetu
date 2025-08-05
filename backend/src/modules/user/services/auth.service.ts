@@ -28,7 +28,7 @@ export const register = async (data: {
   const userName = await generateUniqueUsername(data.firstName, data.lastName);
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
 
-  const userId = await generateUID("usr", "user", "id", 8);
+  const userId = await generateUID("usr", "user", "id", 10);
 
   const user = await prisma.user.create({
     data: {

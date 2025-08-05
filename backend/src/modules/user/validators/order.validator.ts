@@ -16,6 +16,9 @@ export const createOrderSchema = z.object({
     customDescription: z.string().min(10).max(2000).optional(),
     customAmount: z.coerce.number().positive().optional(),
 
+    // platform fee details
+    platformFeePaidBy: z.enum(["BUYER", "SELLER", "BOTH"]).optional(),
+
     // Optional metadata (used in custom and service orders)
     meta: z
         .object({
@@ -48,3 +51,13 @@ export const isServiceOrder = (data: any) =>
 export const isCustomOrder = (data: any) => data.listingId === null;
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+
+
+export const createDisputeTicketSchema = z.object({
+    type: z.enum(["DELIVERY_FAILURE",
+        "ITEM_ISSUE",
+        "REFUND_REQUEST",
+        "FRAUD",
+        "OTHER"]),
+    reason: z.string().max(500),
+})

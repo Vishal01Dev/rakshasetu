@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { notFound } from './utils/notFound';
 import { errorHandler } from './utils/errorHandler';
 
+
 const app = express();
 dotenv.config();
 
@@ -34,6 +35,9 @@ import conversationRoutes from './modules/user/routes/conversation.routes';
 // Importing order routes
 import orderRoutes from './modules/user/routes/order.routes';
 
+// Importing payment routes
+import paymentRoutes from './modules/user/routes/payment.routes';
+
 // Routes
 // Admin routes
 app.use('/api/v1/admin/auth', adminAuthRoutes);
@@ -56,6 +60,8 @@ app.use('/api/v1/user/conversations', conversationRoutes);
 //Order routes
 app.use('/api/v1/user/orders', orderRoutes);
 
+// Payment routes
+app.use('/api/v1/user/payments', paymentRoutes);
 
 
 // 404 & Error handling

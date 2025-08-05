@@ -16,7 +16,7 @@ export const handleCreateAdminRole = async (name: string, description?: string) 
         throw new Error('Role with this name already exists');
     }
 
-    const adminRoleId = await generateUID('ar', 'adminRole', 'id', 8)
+    const adminRoleId = await generateUID('ar', 'adminRole', 'id', 10)
 
     const adminRole = await prisma.adminRole.create({
         data: {
@@ -46,7 +46,7 @@ export const handleCreateAdminPermission = async (name: string, label?: string) 
         throw new Error('Permission with this name already exists');
     }
 
-    const adminPermissionId = await generateUID('ap', 'adminPermission', 'id', 8)
+    const adminPermissionId = await generateUID('ap', 'adminPermission', 'id', 10)
 
     const adminPermission = await prisma.adminPermission.create({
         data: {
@@ -122,7 +122,7 @@ export const handleCreateAdmin = async (email: string, firstName: string, lastNa
         throw new Error("Admin role does not exist.");
     }
 
-    const adminId = await generateUID('ad', 'admin', 'id', 8)
+    const adminId = await generateUID('ad', 'admin', 'id', 10)
 
     const admin = await prisma.admin.create({
         data: {

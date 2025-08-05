@@ -292,6 +292,7 @@ enum PAYMENT_STATUS {
   FAILED
   REFUNDED
   CANCELLED
+  RELEASED
 }
 
 enum ORDER_STATUS {
@@ -329,7 +330,6 @@ enum TICKET_STATUS {
 enum PAYMENT_GATEWAY_METHOD {
   RAZORPAY
   QR
-  UPI
   LINK
 }
 
@@ -337,6 +337,37 @@ enum ORDER_TYPE {
   CUSTOM
   PRODUCT
   SERVICE
+}
+
+enum PLATFORM_FEE_PAYER {
+  BUYER
+  SELLER
+  BOTH
+}
+
+enum FEE_TYPE {
+  PERCENTAGE
+  FIXED
+}
+
+enum RELEASE_STATUS {
+  PENDING
+  SENT
+  APPROVED
+  REJECTED
+}
+
+enum REFUND_STATUS {
+  NONE
+  PARTIALLY_REFUNDED
+  FULLY_REFUNDED
+}
+
+model PlatformSetting {
+  id        Int      @id @default(1)
+  feeType   FEE_TYPE @default(PERCENTAGE) // percent or fixed amount
+  feeValue  Float    @default(10) // e.g. 10% or ₹100
+  updatedAt DateTime @updatedAt
 }
 
 model Order {
@@ -364,6 +395,11 @@ model Order {
   customTitle String? // Optional: for display in custom orders
   customDesc  String? // Optional: for display in custom orders
   notes       String? // Optional: extra instructions from buyer
+
+  platformFeeAmount Float // Fee taken by RakshaSetu
+  platformFeePaidBy PLATFORM_FEE_PAYER // Enum: BUYER | SELLER | BOTH
+  finalBuyerAmount  Float // What buyer actually pays
+  sellerReceives    Float // What seller receives after fee deduction
 
   buyer   User     @relation("order_buyer", fields: [buyerId], references: [id])
   seller  User     @relation("order_seller", fields: [sellerId], references: [id])
@@ -396,29 +432,66 @@ model OrderMeta {
 }
 
 model EscrowTransaction {
-  id                String                 @id
-  orderId           String                 @unique
-  amount            Float
+  id                String             @id
+  orderId           String             @unique
+  amount            Float // Total amount paid by buyer (includes fee if buyer pays)
+  platformFeeAmount Float
+  platformFeePaidBy PLATFORM_FEE_PAYER
+
+  sellerReceives Float // amount - fee (if seller pays)
+
   status            PAYMENT_STATUS
   paymentMode       PAYMENT_GATEWAY_METHOD
   razorpayPaymentId String?
   paidAt            DateTime?
-  releasedAt        DateTime?
-  refundedAt        DateTime?
+
+  // 🔓 Payment Release (Manual approval flow)
+  releaseRequested         Boolean        @default(false)
+  releaseStatus            RELEASE_STATUS @default(PENDING)
+  releaseRequestedAt       DateTime?
+  releaseRequestedByUserId String?
+  releaseApprovedByAdmin   Boolean        @default(false)
+  releaseApprovedAt        DateTime?
+  releaseApprovedByAdminId String?
+  releaseNotes             String?
+
+  refundStatus REFUND_STATUS @default(NONE) // NONE, PARTIALLY_REFUNDED, FULLY_REFUNDED
+
+  // 💰 Refunds
+  refunds Refund[]
 
   order Order @relation(fields: [orderId], references: [id])
 }
 
+model Refund {
+  id                String   @id
+  transactionId     String
+  amount            Float
+  reason            String?
+  notes             String?
+  refundedAt        DateTime @default(now())
+  refundedByAdminId String
+  razorpayRefundId  String?
+
+  transaction EscrowTransaction @relation(fields: [transactionId], references: [id])
+}
+
 model DisputeTicket {
-  id         String        @id
-  orderId    String        @unique
-  type       DISPUTE_TYPE
-  status     TICKET_STATUS
-  openedBy   String // buyerId or admin system
-  reason     String
-  resolution String?
-  adminNotes String?
-  resolvedAt DateTime?
+  id                String        @id
+  orderId           String        @unique
+  type              DISPUTE_TYPE
+  status            TICKET_STATUS
+  openedBy          String // buyerId or system
+  reason            String
+  resolution        String?
+  adminNotes        String?
+  resolvedAt        DateTime?
+  resolvedByAdminId String?
+
+  refundedAmount Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   order Order @relation(fields: [orderId], references: [id])
 }

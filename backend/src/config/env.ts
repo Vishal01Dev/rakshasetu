@@ -22,6 +22,9 @@ const envSchema = z.object({
   EMAIL_PASS: z.string(),
   EMAIL_FROM_NAME: z.string(),
   EMAIL_FROM_EMAIL: z.string(),
+  RAZORPAY_KEY_ID: z.string(),
+  RAZORPAY_KEY_SECRET: z.string(),
+  NEXT_PUBLIC_RAZORPAY_KEY: z.string(),
 });
 
 const parsed = envSchema.safeParse(process.env);
